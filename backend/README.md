@@ -14,8 +14,13 @@ Quick start for local development.
    - If `app` is already running in Docker, stop it first: `docker compose stop app celery_worker`
 3. Install backend deps:
 	- `pip install -e .`
-4. Run API:
+4. Apply database migrations:
+	- `alembic upgrade head`
+5. Run API:
 	- `uvicorn app.main:app --reload --host 0.0.0.0 --port 8000`
+
+If you see errors like `relation "users" does not exist`, run migrations again:
+- `alembic upgrade head`
 
 If you see `getaddrinfo failed`, make sure your `.env` uses local hosts:
 - `POSTGRES_HOST=localhost`
