@@ -1,4 +1,4 @@
-FROM python:3.12-slim
+FROM python:3.12-slim AS builder
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -17,7 +17,25 @@ COPY alembic.ini /app/alembic.ini
 COPY migrations /app/migrations
 
 RUN pip install --upgrade pip \
-    && pip install .
+    && pip install --prefix=/install .
+
+FROM python:3.12-slim AS runtime
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+WORKDIR /app
+
+RUN useradd --create-home appuser
+
+COPY --from=builder /install /usr/local
+COPY app /app/app
+COPY alembic.ini /app/alembic.ini
+COPY migrations /app/migrations
+COPY pyproject.toml /app/pyproject.toml
+COPY README.md /app/README.md
+
+USER appuser
 
 EXPOSE 8000
 

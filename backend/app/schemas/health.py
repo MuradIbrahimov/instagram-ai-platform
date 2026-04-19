@@ -5,5 +5,8 @@ from pydantic import BaseModel
 
 class HealthResponse(BaseModel):
     app_name: str
-    environment: str
-    db_status: Literal["up", "down"]
+    env: str
+    version: str
+    status: Literal["ok", "degraded"]
+    db_status: Literal["ok", "down"]
+    redis_status: Literal["ok", "down"]
