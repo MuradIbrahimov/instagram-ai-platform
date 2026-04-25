@@ -27,7 +27,6 @@ celery_app.conf.update(
         Queue("sync"),
     ),
     task_default_queue="webhooks",
-    task_soft_time_limit=30,
     task_routes={
         "app.tasks.webhook.*": {
             "queue": "webhooks",
@@ -40,6 +39,9 @@ celery_app.conf.update(
         "app.tasks.delivery.*": {
             "queue": "delivery",
             "soft_time_limit": 20,
+        },
+        "app.tasks.sync.*": {
+            "queue": "sync",
         },
     },
 )
