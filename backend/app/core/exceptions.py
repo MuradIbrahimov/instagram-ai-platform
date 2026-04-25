@@ -47,8 +47,16 @@ async def request_validation_exception_handler(
     )
 
 
-async def unhandled_exception_handler(_: Request, exc: Exception) -> JSONResponse:
-    logger.exception("unhandled_exception", error=str(exc))
+async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+    import traceback
+    logger.exception(
+        "unhandled_exception",
+        error=str(exc),
+        exc_type=type(exc).__name__,
+        path=request.url.path,
+        method=request.method,
+        traceback=traceback.format_exc(),
+    )
     return JSONResponse(
         status_code=500,
         content=build_error_payload(

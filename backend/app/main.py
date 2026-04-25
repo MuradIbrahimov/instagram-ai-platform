@@ -12,7 +12,7 @@ from starlette.responses import Response
 
 from app.api.router import api_router
 from app.core.config import get_settings
-from app.core.database import SessionLocal, engine
+from app.core.database import SessionLocal, engine, sync_engine
 from app.core.exceptions import (
     AppException,
     app_exception_handler,
@@ -50,6 +50,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
     yield
     await redis_client.aclose()
     await engine.dispose()
+    sync_engine.dispose()
     logger.info("application_shutdown_complete")
 
 
