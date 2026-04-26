@@ -10,11 +10,13 @@ const DEFAULT_FILTERS: ConversationFilters = {};
 interface ConversationState {
   activeConversationId: string | null;
   filters: ConversationFilters;
+  insightsOpen: boolean;
 
   setActiveConversation: (id: string | null) => void;
   setFilters: (filters: Partial<ConversationFilters>) => void;
   setStatusFilter: (status: ConversationStatus | undefined) => void;
   resetFilters: () => void;
+  toggleInsights: () => void;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -22,6 +24,7 @@ interface ConversationState {
 export const useConversationStore = create<ConversationState>()((set) => ({
   activeConversationId: null,
   filters: DEFAULT_FILTERS,
+  insightsOpen: false,
 
   setActiveConversation: (id) => set({ activeConversationId: id }),
 
@@ -34,6 +37,8 @@ export const useConversationStore = create<ConversationState>()((set) => ({
     })),
 
   resetFilters: () => set({ filters: DEFAULT_FILTERS }),
+
+  toggleInsights: () => set((state) => ({ insightsOpen: !state.insightsOpen })),
 }));
 
 // ─── Selector hooks ───────────────────────────────────────────────────────────

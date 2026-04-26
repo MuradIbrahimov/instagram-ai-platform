@@ -20,16 +20,23 @@ export default function WorkspacesPage() {
   const token = useAuthStore((s) => s.token);
 
   const { data: workspaces, isLoading } = useWorkspaces();
+  const activeWorkspaceId = useAuthStore((s) => s.activeWorkspaceId);
 
-  // If user has exactly 1 workspace — auto-select and redirect
+  // If user has exactly 1 workspace, OR a previously-active workspace — auto-select and redirect
   useEffect(() => {
     if (!workspaces) return;
     setWorkspaces(workspaces);
-    if (workspaces.length === 1) {
+    const previouslyActive = activeWorkspaceId
+      ? workspaces.find((w) => w.id === activeWorkspaceId)
+      : null;
+    if (previouslyActive) {
+      setWorkspace(previouslyActive);
+      router.replace("/conversations");
+    } else if (workspaces.length === 1) {
       setWorkspace(workspaces[0]);
       router.replace("/conversations");
     }
-  }, [workspaces, setWorkspace, setWorkspaces, router]);
+  }, [workspaces, activeWorkspaceId, setWorkspace, setWorkspaces, router]);
 
   function handleOpen(workspace: WorkspaceWithRole) {
     setWorkspace(workspace);

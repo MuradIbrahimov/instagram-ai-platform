@@ -6,6 +6,7 @@ import {
   useQuery,
   type InfiniteData,
 } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 import { useAuthStore } from "@/stores/auth-store";
 import { queryClient } from "@/lib/query-client";
 import {
@@ -26,6 +27,25 @@ import type { UpdateConversationData } from "@/lib/api/conversations";
 const CONV_PAGE_SIZE = 20;
 const MSG_PAGE_SIZE = 50;
 
+// ─── Tab visibility ───────────────────────────────────────────────────────────
+
+function useTabVisible(): boolean {
+  const [visible, setVisible] = useState(
+    typeof document !== "undefined"
+      ? document.visibilityState === "visible"
+      : true,
+  );
+
+  useEffect(() => {
+    const handler = () =>
+      setVisible(document.visibilityState === "visible");
+    document.addEventListener("visibilitychange", handler);
+    return () => document.removeEventListener("visibilitychange", handler);
+  }, []);
+
+  return visible;
+}
+
 // ─── Query Keys ───────────────────────────────────────────────────────────────
 
 export const conversationKeys = {
@@ -44,6 +64,7 @@ export const conversationKeys = {
 
 export function useConversations(filters: ConversationFilters) {
   const workspaceId = useAuthStore((s) => s.currentWorkspace?.id ?? "");
+  const tabVisible = useTabVisible();
 
   return useInfiniteQuery({
     queryKey: conversationKeys.list(workspaceId, filters),
@@ -56,6 +77,8 @@ export function useConversations(filters: ConversationFilters) {
         : undefined,
     staleTime: 10_000,
     enabled: Boolean(workspaceId),
+    refetchInterval: tabVisible ? 10_000 : false,
+    refetchIntervalInBackground: false,
   });
 }
 
@@ -76,6 +99,7 @@ export function useConversation(conversationId: string | null) {
 
 export function useMessages(conversationId: string | null) {
   const workspaceId = useAuthStore((s) => s.currentWorkspace?.id ?? "");
+  const tabVisible = useTabVisible();
 
   return useInfiniteQuery({
     queryKey: conversationKeys.messages(
@@ -96,6 +120,8 @@ export function useMessages(conversationId: string | null) {
         : undefined,
     staleTime: 5_000,
     enabled: Boolean(workspaceId && conversationId),
+    refetchInterval: tabVisible && Boolean(conversationId) ? 5_000 : false,
+    refetchIntervalInBackground: false,
   });
 }
 

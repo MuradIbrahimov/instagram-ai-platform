@@ -1,28 +1,19 @@
-import base64
-import hashlib
 import uuid
 from collections.abc import Mapping
 
-from cryptography.fernet import Fernet
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.config import get_settings
+from app.core.security import decrypt_value, encrypt_value
 from app.models.instagram_account import InstagramAccount
 
 
 class InstagramRepository:
-    def _fernet(self) -> Fernet:
-        key_material = get_settings().encryption_key.encode("utf-8")
-        digest = hashlib.sha256(key_material).digest()
-        fernet_key = base64.urlsafe_b64encode(digest)
-        return Fernet(fernet_key)
-
     def encrypt_token(self, token: str) -> str:
-        return self._fernet().encrypt(token.encode("utf-8")).decode("utf-8")
+        return encrypt_value(token)
 
     def decrypt_token(self, encrypted: str) -> str:
-        return self._fernet().decrypt(encrypted.encode("utf-8")).decode("utf-8")
+        return decrypt_value(encrypted)
 
     async def create(
         self,

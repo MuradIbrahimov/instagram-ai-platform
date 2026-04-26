@@ -24,6 +24,7 @@ interface AuthState {
 interface PersistedState {
   token: string | null;
   activeWorkspaceId: string | null;
+  currentWorkspace: Workspace | null;
 }
 
 // ─── Store ────────────────────────────────────────────────────────────────────
@@ -98,6 +99,7 @@ export const useAuthStore = create<AuthState>()(
       partialize: (state): PersistedState => ({
         token: state.token,
         activeWorkspaceId: state.activeWorkspaceId,
+        currentWorkspace: state.currentWorkspace,
       }),
     },
   ),

@@ -1,10 +1,11 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
-import { Pause, RefreshCw, Send } from "lucide-react";
+import { RefreshCw, Send } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useSendMessage, usePauseAI, useResumeAI, useUpdateConversation } from "@/hooks/use-conversations";
+import { useSendMessage, useUpdateConversation } from "@/hooks/use-conversations";
 import { useAuthStore } from "@/stores/auth-store";
+import { AiStatusBanner } from "@/components/conversations/ai-status-banner";
 import type { Conversation } from "@/types/api";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
@@ -24,11 +25,10 @@ export function ReplyBox({ conversation }: ReplyBoxProps) {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const sendMutation = useSendMessage();
-  const pauseMutation = usePauseAI();
-  const resumeMutation = useResumeAI();
   const updateMutation = useUpdateConversation();
 
   const isClosed = conversation.status === "closed";
+  const isHandoff = conversation.status === "handoff";
   const isAiActive = !conversation.ai_paused;
   const remaining = MAX_CHARS - text.length;
   const isOverLimit = text.length > MAX_CHARS;
@@ -65,14 +65,6 @@ export function ReplyBox({ conversation }: ReplyBoxProps) {
       text: trimmed,
     });
   }, [canSend, text, sendMutation, workspaceId, conversation.id]);
-
-  function handlePause() {
-    pauseMutation.mutate({ workspaceId, conversationId: conversation.id });
-  }
-
-  function handleResume() {
-    resumeMutation.mutate({ workspaceId, conversationId: conversation.id });
-  }
 
   function handleReopen() {
     updateMutation.mutate({
@@ -126,78 +118,13 @@ export function ReplyBox({ conversation }: ReplyBoxProps) {
         borderColor: "var(--color-border)",
       }}
     >
-      {/* ── AI banner ── */}
-      {isAiActive ? (
-        <div
-          className="flex items-center justify-between px-4 py-2 text-xs border-b"
-          style={{
-            background:
-              "color-mix(in srgb, var(--color-accent) 6%, var(--color-surface))",
-            borderColor:
-              "color-mix(in srgb, var(--color-accent) 20%, transparent)",
-            color: "var(--color-foreground-muted)",
-          }}
-        >
-          <span>
-            <span
-              className="font-medium"
-              style={{ color: "var(--color-accent)" }}
-            >
-              AI is handling this conversation
-            </span>{" "}
-            · Pause to reply manually
-          </span>
-          <button
-            type="button"
-            onClick={handlePause}
-            disabled={pauseMutation.isPending}
-            className="flex items-center gap-1 font-medium px-2 py-0.5 rounded-md transition-hover disabled:opacity-60"
-            style={{
-              color: "var(--color-warning)",
-              background:
-                "color-mix(in srgb, var(--color-warning) 12%, transparent)",
-              border:
-                "1px solid color-mix(in srgb, var(--color-warning) 25%, transparent)",
-            }}
-          >
-            <Pause className="size-3" />
-            Pause
-          </button>
-        </div>
-      ) : (
-        /* AI paused indicator */
-        <div
-          className="flex items-center gap-1.5 px-4 py-1.5 text-xs border-b"
-          style={{
-            background:
-              "color-mix(in srgb, var(--color-success) 5%, var(--color-surface))",
-            borderColor:
-              "color-mix(in srgb, var(--color-success) 15%, transparent)",
-          }}
-        >
-          <span
-            className="size-1.5 rounded-full"
-            style={{ background: "var(--color-success)" }}
-          />
-          <span style={{ color: "var(--color-success)" }} className="font-medium">
-            You&apos;re in control
-          </span>
-          <span style={{ color: "var(--color-foreground-muted)" }}>
-            · AI is paused
-          </span>
-          <button
-            type="button"
-            onClick={handleResume}
-            disabled={resumeMutation.isPending}
-            className="ml-auto text-xs font-medium underline underline-offset-2 disabled:opacity-60"
-            style={{ color: "var(--color-accent)" }}
-          >
-            Resume AI
-          </button>
-        </div>
-      )}
+      {/* ── AI Status Banner ── */}
+      <AiStatusBanner conversation={conversation} workspaceId={workspaceId} />
 
-      {/* ── Input area ── */}
+      {/* ── Hide input when conversation is in handoff ── */}
+      {isHandoff ? null : (
+        <>
+          {/* ── Input area ── */}
       <div className="flex items-end gap-2 px-3 py-2.5">
         <textarea
           ref={textareaRef}
@@ -279,6 +206,8 @@ export function ReplyBox({ conversation }: ReplyBoxProps) {
             {remaining < 0 ? `${Math.abs(remaining)} over limit` : `${remaining} remaining`}
           </span>
         </div>
+      )}
+        </>
       )}
     </div>
   );

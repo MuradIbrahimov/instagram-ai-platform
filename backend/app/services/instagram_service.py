@@ -11,6 +11,7 @@ from app.schemas.instagram import (
     InstagramAccountResponse,
     InstagramAccountUpdate,
 )
+from app.services.audit_service import log_action
 
 
 class InstagramService:
@@ -47,6 +48,14 @@ class InstagramService:
             db=db,
             workspace_id=workspace_id,
             data=payload,
+        )
+        await log_action(
+            db=db,
+            action="instagram_account.created",
+            target_type="instagram_account",
+            target_id=str(account.id),
+            workspace_id=workspace_id,
+            actor_user_id=current_user.id,
         )
         return self._to_response(account)
 
@@ -98,6 +107,13 @@ class InstagramService:
                 message="Instagram account not found",
                 status_code=404,
             )
+        await log_action(
+            db=db,
+            action="instagram_account.updated",
+            target_type="instagram_account",
+            target_id=str(account.id),
+            workspace_id=workspace_id,
+        )
         return self._to_response(account)
 
     def _to_response(self, account: InstagramAccount) -> InstagramAccountResponse:

@@ -21,6 +21,7 @@ import { useCurrentWorkspace, useUser } from "@/stores/auth-store";
 import { useLogout } from "@/hooks/use-auth-mutations";
 import { Logo } from "@/components/shared/logo";
 import { Avatar } from "@/components/shared/avatar";
+import { useDocuments } from "@/hooks/use-knowledge";
 
 // ─── Nav Items ────────────────────────────────────────────────────────────────
 
@@ -52,6 +53,8 @@ export function Sidebar() {
   const workspace = useCurrentWorkspace();
   const user = useUser();
   const logout = useLogout();
+  const { data: docsData } = useDocuments();
+  const docCount = docsData?.total ?? 0;
 
   const isSettingsActive = pathname.startsWith("/settings");
   const [settingsOpen, setSettingsOpen] = useState(isSettingsActive);
@@ -117,6 +120,17 @@ export function Sidebar() {
             >
               <Icon className="size-4 shrink-0" />
               {!collapsed && <span>{label}</span>}
+              {!collapsed && label === "Knowledge Base" && docCount > 0 && (
+                <span
+                  className="ml-auto rounded-full px-1.5 py-0.5 text-xs font-medium tabular-nums"
+                  style={{
+                    background: "color-mix(in srgb, var(--color-accent) 20%, transparent)",
+                    color: "var(--color-accent)",
+                  }}
+                >
+                  {docCount}
+                </span>
+              )}
             </Link>
           );
         })}

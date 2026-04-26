@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, MoreHorizontal, UserPlus } from "lucide-react";
+import { ArrowLeft, PanelRightOpen, MoreHorizontal, UserPlus } from "lucide-react";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { cn } from "@/lib/utils";
 import { usePauseAI, useResumeAI, useUpdateConversation } from "@/hooks/use-conversations";
@@ -60,6 +60,10 @@ export function ConversationHeader({
   const setActiveConversation = useConversationStore(
     (s) => s.setActiveConversation,
   );
+  const { insightsOpen, toggleInsights } = useConversationStore((s) => ({
+    insightsOpen: s.insightsOpen,
+    toggleInsights: s.toggleInsights,
+  }));
 
   const pauseMutation = usePauseAI();
   const resumeMutation = useResumeAI();
@@ -271,6 +275,25 @@ export function ConversationHeader({
           aria-label="More actions"
         >
           <MoreHorizontal className="size-4" />
+        </button>
+
+        {/* Insights toggle */}
+        <button
+          type="button"
+          onClick={toggleInsights}
+          className={cn(
+            "p-1.5 rounded-md transition-hover",
+            insightsOpen ? "bg-white/10" : "hover:bg-white/5",
+          )}
+          style={{
+            color: insightsOpen
+              ? "var(--color-accent)"
+              : "var(--color-foreground-muted)",
+          }}
+          aria-label="Toggle insights panel"
+          title="Conversation insights"
+        >
+          <PanelRightOpen className="size-4" />
         </button>
       </div>
     </div>

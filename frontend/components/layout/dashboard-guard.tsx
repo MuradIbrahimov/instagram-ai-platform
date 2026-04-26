@@ -26,7 +26,7 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
 
   // Validate token via /auth/me — 401 is caught by axios interceptor which
   // clears auth and redirects to /login automatically.
-  const { data: user, isLoading } = useQuery({
+  const { data: user, isLoading, isError } = useQuery({
     queryKey: ["me"],
     queryFn: getCurrentUser,
     enabled: Boolean(token),
@@ -41,15 +41,22 @@ export function DashboardGuard({ children }: DashboardGuardProps) {
     }
   }, [user, token, setAuth]);
 
-  // Redirect to workspace picker if token is valid but no workspace selected
+  // Redirect to workspace picker if token is valid but no workspace selected.
+  // Also redirect if the /me query failed with a non-401 error (network error, 5xx)
+  // to avoid an infinite spinner — the workspaces page will re-validate.
   useEffect(() => {
+    if (isError && !currentWorkspace) {
+      router.replace("/workspaces");
+      return;
+    }
     if (!isLoading && user && !currentWorkspace) {
       router.replace("/workspaces");
     }
-  }, [isLoading, user, currentWorkspace, router]);
+  }, [isLoading, isError, user, currentWorkspace, router]);
 
-  // Show spinner while validating token or no token yet
-  if (!token || isLoading) {
+  // Show spinner while validating token or no token yet.
+  // If we have a persisted workspace, skip the spinner so the UI shows immediately.
+  if (!token || (isLoading && !currentWorkspace)) {
     return <FullPageSpinner />;
   }
 

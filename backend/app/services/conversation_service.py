@@ -11,6 +11,7 @@ from app.schemas.conversations import (
     ConversationResponse,
     ConversationUpdate,
 )
+from app.services.audit_service import log_action
 
 
 class ConversationService:
@@ -93,6 +94,14 @@ class ConversationService:
                 message="Conversation not found",
                 status_code=404,
             )
+        await log_action(
+            db=db,
+            action="conversation.assigned",
+            target_type="conversation",
+            target_id=str(conversation_id),
+            workspace_id=workspace_id,
+            metadata={"assigned_user_id": str(user_id)},
+        )
         return self._to_response(updated)
 
     async def pause_ai(
@@ -113,6 +122,13 @@ class ConversationService:
                 message="Conversation not found",
                 status_code=404,
             )
+        await log_action(
+            db=db,
+            action="conversation.ai_paused",
+            target_type="conversation",
+            target_id=str(conversation_id),
+            workspace_id=workspace_id,
+        )
         return self._to_response(conversation)
 
     async def resume_ai(
@@ -133,6 +149,13 @@ class ConversationService:
                 message="Conversation not found",
                 status_code=404,
             )
+        await log_action(
+            db=db,
+            action="conversation.ai_resumed",
+            target_type="conversation",
+            target_id=str(conversation_id),
+            workspace_id=workspace_id,
+        )
         return self._to_response(conversation)
 
     async def mark_read(

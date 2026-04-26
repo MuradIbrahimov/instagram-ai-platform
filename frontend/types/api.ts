@@ -143,29 +143,35 @@ export interface Message {
 
 // ─── Knowledge Base ───────────────────────────────────────────────────────────
 
-export type KnowledgeSourceType = "upload" | "url" | "text";
+export type KnowledgeSourceType = "manual" | "url";
 export type KnowledgeDocumentStatus = "processing" | "ready" | "failed";
+
+export interface KnowledgeChunk {
+  id: string;
+  chunk_index: number;
+  content: string;
+  token_count: number | null;
+}
 
 export interface KnowledgeDocument {
   id: string;
   workspace_id: string;
   title: string;
   source_type: KnowledgeSourceType;
-  source_url: string | null;
   status: KnowledgeDocumentStatus;
-  content_excerpt: string;
+  raw_text: string;
   chunk_count: number;
+  chunks: KnowledgeChunk[];
   created_at: string;
-  updated_at: string;
+  updated_at?: string;
 }
 
-export interface KnowledgeChunk {
+export interface KnowledgeDocumentListItem {
   id: string;
-  document_id: string;
-  workspace_id: string;
-  content: string;
-  chunk_index: number;
-  token_count: number;
+  title: string;
+  status: KnowledgeDocumentStatus;
+  source_type: KnowledgeSourceType;
+  chunk_count: number;
   created_at: string;
 }
 

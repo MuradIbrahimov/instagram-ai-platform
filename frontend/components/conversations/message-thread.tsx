@@ -4,11 +4,12 @@ import { useEffect, useMemo, useRef } from "react";
 import { isSameDay, format } from "date-fns";
 import { useMessages, useSendMessage } from "@/hooks/use-conversations";
 import { useAuthStore } from "@/stores/auth-store";
-import { MessageBubble, DateDivider, TypingIndicator } from "./message-bubble";
+import { MessageBubble, DateDivider } from "./message-bubble";
 import { ReplyBox } from "./reply-box";
 import { ConversationHeader } from "./conversation-header";
+import { AiRunIndicator } from "./ai-run-indicator";
 import { FullPageSpinner } from "@/components/shared/loading-spinner";
-import type { Conversation, Message } from "@/types/api";
+import type { Conversation, Message, SenderType } from "@/types/api";
 
 // ─── Date label helper ────────────────────────────────────────────────────────
 
@@ -135,12 +136,10 @@ export function MessageThread({
     });
   }
 
-  // Show AI typing indicator: AI is active + last message is inbound
+  // Show AI run indicator when last message is inbound from customer
   const lastMessage = allMessages[allMessages.length - 1];
-  const showTyping =
-    !conversation.ai_paused &&
-    lastMessage?.direction === "inbound" &&
-    lastMessage?.sender_type === "customer";
+  const lastMessageDirection = lastMessage?.direction ?? null;
+  const lastMessageSenderType = (lastMessage?.sender_type ?? null) as SenderType | null;
 
   if (isLoading) {
     return (
@@ -206,18 +205,20 @@ export function MessageThread({
                   key={msg.id}
                   message={msg}
                   onRetry={handleRetry}
+                  conversationId={conversation.id}
+                  conversationStatus={conversation.status}
                 />
               ))}
             </div>
           </div>
         ))}
 
-        {/* AI typing indicator */}
-        {showTyping && (
-          <div className="pt-1">
-            <TypingIndicator />
-          </div>
-        )}
+        {/* AI run indicator */}
+        <AiRunIndicator
+          conversation={conversation}
+          lastMessageDirection={lastMessageDirection}
+          lastMessageSenderType={lastMessageSenderType}
+        />
       </div>
 
       {/* Reply box */}

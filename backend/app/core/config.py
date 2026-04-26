@@ -14,7 +14,7 @@ class Settings(BaseSettings):
     )
 
     app_name: str = "Instagram DM AI Platform"
-    app_env: Literal["development", "staging", "production"] = "development"
+    app_env: Literal["development", "staging", "production", "test"] = "development"
     debug: bool = False
     api_v1_prefix: str = "/api/v1"
     app_version: str = "0.1.0"

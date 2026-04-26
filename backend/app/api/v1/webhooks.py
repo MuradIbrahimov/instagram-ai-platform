@@ -3,6 +3,7 @@ from fastapi.responses import PlainTextResponse
 
 from app.core.exceptions import AppException
 from app.core.logging import get_logger
+from app.core.rate_limiter import limiter
 from app.services.webhook_service import WebhookService, get_webhook_service
 
 logger = get_logger(__name__)
@@ -27,6 +28,7 @@ async def verify_meta_webhook(
 
 
 @router.post("/meta")
+@limiter.limit("300/minute")
 async def receive_meta_webhook(
     request: Request,
     service: WebhookService = Depends(get_webhook_service),

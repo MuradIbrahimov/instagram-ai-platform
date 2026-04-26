@@ -7,8 +7,11 @@ import structlog
 from fastapi import Depends, FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
-from starlette.responses import Response
+from starlette.responses import JSONResponse, Response
 
 from app.api.router import api_router
 from app.core.config import get_settings
@@ -21,12 +24,51 @@ from app.core.exceptions import (
     unhandled_exception_handler,
 )
 from app.core.logging import get_logger, setup_logging
+from app.core.rate_limiter import limiter
 from app.core.redis import ping_redis, redis_client
 from app.repositories.health_repository import HealthRepository
 from app.schemas.health import HealthResponse
 from app.services.health_service import HealthService, get_health_service
 
 logger = get_logger(__name__)
+
+
+def validate_environment(settings) -> None:  # type: ignore[no-untyped-def]
+    """Validate critical environment settings at startup.
+
+    Raises RuntimeError with a clear message if any check fails.
+    Should NOT run in test environment.
+    """
+    if settings.app_env == "test":
+        return
+
+    dangerous_values = {"change-me", "changeme", "change_me", "default", "secret"}
+    if settings.secret_key.lower() in dangerous_values:
+        raise RuntimeError(
+            "SECRET_KEY must be set to a secure random value — "
+            "current value is a placeholder."
+        )
+
+    import base64
+    import hashlib
+    from cryptography.fernet import Fernet
+
+    try:
+        key_material = settings.encryption_key.encode("utf-8")
+        digest = hashlib.sha256(key_material).digest()
+        Fernet(base64.urlsafe_b64encode(digest))
+    except ValueError as exc:
+        raise RuntimeError(
+            f"ENCRYPTION_KEY cannot be used to construct a Fernet key: {exc}"
+        ) from exc
+
+    if not settings.meta_verify_token or not settings.meta_verify_token.strip():
+        raise RuntimeError("META_VERIFY_TOKEN must be set to a non-empty value.")
+
+    if settings.app_env == "production" and settings.debug:
+        raise RuntimeError(
+            "DEBUG must be False in production. Set APP_ENV=production and DEBUG=false."
+        )
 
 
 @asynccontextmanager
@@ -36,6 +78,7 @@ async def lifespan(_: FastAPI) -> AsyncIterator[None]:
         app_env=settings.app_env,
         log_level="DEBUG" if settings.debug else "INFO",
     )
+    validate_environment(settings)
 
     async with SessionLocal() as session:
         db_ok = await HealthRepository(session).is_database_reachable()
@@ -63,6 +106,19 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    # Attach the rate limiter to app state
+    application.state.limiter = limiter
+    application.add_middleware(SlowAPIMiddleware)
+
+    # Custom 429 handler matching our error format
+    async def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": {"code": "rate_limit_exceeded", "message": "Too many requests"}},
+        )
+
+    application.add_exception_handler(RateLimitExceeded, _rate_limit_handler)
+
     application.add_middleware(
         CORSMiddleware,
         allow_origins=settings.cors_origins,
@@ -77,6 +133,7 @@ def create_app() -> FastAPI:
         call_next: Callable[[Request], Awaitable[Response]],
     ) -> Response:
         request_id = str(uuid.uuid4())
+        request.state.request_id = request_id
         structlog.contextvars.clear_contextvars()
         structlog.contextvars.bind_contextvars(request_id=request_id)
         start = perf_counter()

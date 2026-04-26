@@ -1,6 +1,5 @@
 "use client";
 
-import { use } from "react";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
@@ -12,9 +11,9 @@ import { LoadingSpinner } from "@/components/shared/loading-spinner";
 export default function AccountSettingsRoute({
   params,
 }: {
-  params: Promise<{ accountId: string }>;
+  params: { accountId: string };
 }) {
-  const { accountId } = use(params);
+  const { accountId } = params;
   const workspace = useCurrentWorkspace();
   const { data: account, isLoading, isError } = useAccount(workspace?.id, accountId);
 

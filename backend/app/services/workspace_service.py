@@ -11,6 +11,7 @@ from app.schemas.workspaces import (
     WorkspaceResponse,
     WorkspaceWithRoleResponse,
 )
+from app.services.audit_service import log_action
 
 
 class WorkspaceService:
@@ -32,6 +33,14 @@ class WorkspaceService:
             name=name,
             slug=unique_slug,
             owner_user_id=current_user.id,
+        )
+        await log_action(
+            db=db,
+            action="workspace.created",
+            target_type="workspace",
+            target_id=str(workspace.id),
+            workspace_id=workspace.id,
+            actor_user_id=current_user.id,
         )
         return self._to_workspace_response(workspace)
 

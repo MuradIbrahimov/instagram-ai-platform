@@ -10,6 +10,7 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - backend
+    restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -h localhost -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
       interval: 5s
@@ -21,6 +22,7 @@ services:
     container_name: ig_ai_redis
     networks:
       - backend
+    restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -41,12 +43,15 @@ services:
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
       FRONTEND_URL: http://localhost:3000
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
     ports:
       - "8000:8000"
     volumes:
       - ./:/app
     networks:
       - backend
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
@@ -66,15 +71,33 @@ services:
       REDIS_URL: redis://redis:6379/0
       CELERY_BROKER_URL: redis://redis:6379/0
       CELERY_RESULT_BACKEND: redis://redis:6379/1
+      PYTHONDONTWRITEBYTECODE: "1"
+      PYTHONUNBUFFERED: "1"
     volumes:
       - ./:/app
     networks:
       - backend
+    restart: unless-stopped
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  flower:
+    image: mher/flower:2.0.1
+    container_name: ig_ai_flower
+    command: ["celery", "flower", "--broker=redis://redis:6379/0", "--port=5555"]
+    ports:
+      - "5555:5555"
+    networks:
+      - backend
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    profiles:
+      - dev
 
 volumes:
   postgres_data:

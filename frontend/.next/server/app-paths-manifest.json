@@ -1,7 +1,7 @@
 {
-  "/_not-found/page": "app/_not-found/page.js",
-  "/workspaces/page": "app/workspaces/page.js",
-  "/(dashboard)/page": "app/(dashboard)/page.js",
+  "/(auth)/login/page": "app/(auth)/login/page.js",
+  "/(dashboard)/settings/accounts/[accountId]/page": "app/(dashboard)/settings/accounts/[accountId]/page.js",
   "/(dashboard)/settings/accounts/page": "app/(dashboard)/settings/accounts/page.js",
+  "/(dashboard)/knowledge/page": "app/(dashboard)/knowledge/page.js",
   "/(dashboard)/conversations/page": "app/(dashboard)/conversations/page.js"
 }

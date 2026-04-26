@@ -1,12 +1,15 @@
 import uuid
 
 from fastapi import APIRouter, Depends, Query
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_workspace_access
 from app.core.database import get_db
+from app.core.exceptions import AppException
 from app.models.conversation import ConversationStatus
 from app.models.membership import WorkspaceRole
+from app.models.message import Message, MessageStatus
 from app.models.workspace import Workspace
 from app.schemas.conversations import (
     AssignConversationRequest,
@@ -16,6 +19,7 @@ from app.schemas.conversations import (
     ConversationUpdate,
 )
 from app.schemas.messages import MessageCreate, MessageResponse
+from app.services.audit_service import log_action
 from app.services.conversation_service import ConversationService, get_conversation_service
 from app.services.message_service import MessageService, get_message_service
 
@@ -172,4 +176,108 @@ async def resume_ai(
         db=db,
         conversation_id=conversation_id,
         workspace_id=workspace_id,
+    )
+
+
+# ─── Message approval / rejection ─────────────────────────────────────────────
+
+@router.post(
+    "/{conversation_id}/messages/{message_id}/approve",
+    response_model=MessageResponse,
+    summary="Approve a queued AI draft and enqueue for delivery",
+)
+async def approve_message(
+    workspace_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    message_id: uuid.UUID,
+    _: tuple[Workspace, WorkspaceRole] = Depends(get_workspace_access),
+    db: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    """Approve a queued AI-drafted message and enqueue it for delivery."""
+    from app.tasks.delivery_tasks import send_outbound_message
+
+    message = await db.get(Message, message_id)
+    if message is None or message.workspace_id != workspace_id or message.conversation_id != conversation_id:
+        raise AppException(
+            code="message_not_found",
+            message="Message not found",
+            status_code=404,
+        )
+    if message.status != MessageStatus.QUEUED:
+        raise AppException(
+            code="message_not_approvable",
+            message=f"Message status is '{message.status.value}', expected 'queued'",
+            status_code=409,
+        )
+
+    send_outbound_message.delay(str(message.id))
+
+    await log_action(
+        db=db,
+        action="message.approved",
+        target_type="message",
+        target_id=str(message.id),
+        workspace_id=workspace_id,
+    )
+
+    return MessageResponse(
+        id=message.id,
+        conversation_id=message.conversation_id,
+        sender_type=message.sender_type,
+        direction=message.direction,
+        message_type=message.message_type,
+        text_content=message.text_content,
+        status=message.status,
+        created_at=message.created_at,
+    )
+
+
+@router.post(
+    "/{conversation_id}/messages/{message_id}/reject",
+    response_model=MessageResponse,
+    summary="Reject a queued AI draft",
+)
+async def reject_message(
+    workspace_id: uuid.UUID,
+    conversation_id: uuid.UUID,
+    message_id: uuid.UUID,
+    _: tuple[Workspace, WorkspaceRole] = Depends(get_workspace_access),
+    db: AsyncSession = Depends(get_db),
+) -> MessageResponse:
+    """Reject a queued AI-drafted message (marks it failed)."""
+    message = await db.get(Message, message_id)
+    if message is None or message.workspace_id != workspace_id or message.conversation_id != conversation_id:
+        raise AppException(
+            code="message_not_found",
+            message="Message not found",
+            status_code=404,
+        )
+    if message.status != MessageStatus.QUEUED:
+        raise AppException(
+            code="message_not_rejectable",
+            message=f"Message status is '{message.status.value}', expected 'queued'",
+            status_code=409,
+        )
+
+    message.status = MessageStatus.FAILED
+    message.error_message = "rejected_by_agent"
+    await db.flush()
+
+    await log_action(
+        db=db,
+        action="message.rejected",
+        target_type="message",
+        target_id=str(message.id),
+        workspace_id=workspace_id,
+    )
+
+    return MessageResponse(
+        id=message.id,
+        conversation_id=message.conversation_id,
+        sender_type=message.sender_type,
+        direction=message.direction,
+        message_type=message.message_type,
+        text_content=message.text_content,
+        status=message.status,
+        created_at=message.created_at,
     )

@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { cn } from "@/lib/utils";
 import type { ConversationListItem } from "@/types/api";
 
@@ -48,7 +49,7 @@ interface ConversationListItemProps {
   onClick: () => void;
 }
 
-export function ConversationListItemCard({
+export const ConversationListItemCard = memo(function ConversationListItemCard({
   item,
   isActive,
   onClick,
@@ -150,7 +151,7 @@ export function ConversationListItemCard({
       </div>
     </button>
   );
-}
+});
 
 // ─── Inline status badge (small) ─────────────────────────────────────────────
 

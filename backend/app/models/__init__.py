@@ -4,6 +4,8 @@ from app.models.conversation import Conversation, ConversationStatus
 from app.core.database import Base
 from app.models.base import TimestampedModel, UUIDPrimaryKeyModel
 from app.models.instagram_account import InstagramAccount, ReplyMode
+from app.models.knowledge_chunk import KnowledgeChunk
+from app.models.knowledge_document import DocumentSourceType, DocumentStatus, KnowledgeDocument
 from app.models.membership import WorkspaceMembership, WorkspaceRole
 from app.models.message import Message, MessageDirection, MessageStatus, MessageType, SenderType
 from app.models.user import User
@@ -32,4 +34,8 @@ __all__ = [
 	"AiDecision",
 	"WebhookEvent",
 	"AuditLog",
+	"KnowledgeDocument",
+	"DocumentSourceType",
+	"DocumentStatus",
+	"KnowledgeChunk",
 ]
